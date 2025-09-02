@@ -10,9 +10,8 @@ func main() {
 	const filepathRoot = "."
 
 	srvMux := http.NewServeMux()
-	fileServer := http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))
-	srvMux.Handle("/app/", fileServer)
-	srvMux.HandleFunc("/healthz", healthzHandler)
+	srvMux.Handle("/app/", http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
+	srvMux.HandleFunc("/healthz", handlerReadiness)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -23,8 +22,8 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-func healthzHandler(rw http.ResponseWriter, req *http.Request) {
+func handlerReadiness(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-	rw.WriteHeader(200)
-	rw.Write([]byte("OK"))
+	rw.WriteHeader(http.StatusOK)
+	rw.Write([]byte(http.StatusText(http.StatusOK)))
 }
