@@ -12,19 +12,21 @@ type apiConfig struct {
 }
 
 func main() {
-	cfg := apiConfig{}
+	apiCfg := apiConfig{
+		fileserverHits: atomic.Int32{},
+	}
 	const port = "8080"
 	const filepathRoot = "."
 
 	srvMux := http.NewServeMux()
 
 	handler := http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))
-	wrapped := cfg.middlewareMetricsInc(handler)
+	wrapped := apiCfg.middlewareMetricsInc(handler)
 
 	srvMux.Handle("/app/", wrapped)
 	srvMux.HandleFunc("/healthz", handlerReadiness)
-	srvMux.HandleFunc("/metrics", cfg.handlerCountReqs)
-	srvMux.HandleFunc("/reset", cfg.handlerReset)
+	srvMux.HandleFunc("/metrics", apiCfg.handlerMetrics)
+	srvMux.HandleFunc("/reset", apiCfg.handlerReset)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -35,22 +37,10 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-func handlerReadiness(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-	rw.WriteHeader(http.StatusOK)
-	rw.Write([]byte(http.StatusText(http.StatusOK)))
-}
-
-func (cfg *apiConfig) handlerCountReqs(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-	rw.WriteHeader(http.StatusOK)
-	rw.Write([]byte(fmt.Sprintf("Hits: %d", cfg.fileserverHits.Load())))
-}
-
-func (cfg *apiConfig) handlerReset(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-	rw.WriteHeader(http.StatusOK)
-	cfg.fileserverHits.Add(-cfg.fileserverHits.Load())
+func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Hits: %d", cfg.fileserverHits.Load())))
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
