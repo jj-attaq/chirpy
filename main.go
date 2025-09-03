@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"log"
+
 	"net/http"
 	"sync/atomic"
 )
@@ -20,13 +20,12 @@ func main() {
 
 	srvMux := http.NewServeMux()
 
-	handler := http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))
-	wrapped := apiCfg.middlewareMetricsInc(handler)
+	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
 
-	srvMux.Handle("/app/", wrapped)
-	srvMux.HandleFunc("/healthz", handlerReadiness)
-	srvMux.HandleFunc("/metrics", apiCfg.handlerMetrics)
-	srvMux.HandleFunc("/reset", apiCfg.handlerReset)
+	srvMux.Handle("/app/", fsHandler)
+	srvMux.HandleFunc("GET /healthz", handlerReadiness)
+	srvMux.HandleFunc("GET /metrics", apiCfg.handlerMetrics)
+	srvMux.HandleFunc("POST /reset", apiCfg.handlerReset)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -35,17 +34,4 @@ func main() {
 
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(srv.ListenAndServe())
-}
-
-func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Hits: %d", cfg.fileserverHits.Load())))
-}
-
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.fileserverHits.Add(1)
-		next.ServeHTTP(w, r)
-	})
 }
