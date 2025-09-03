@@ -23,9 +23,9 @@ func main() {
 	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
 
 	srvMux.Handle("/app/", fsHandler)
-	srvMux.HandleFunc("GET /healthz", handlerReadiness)
-	srvMux.HandleFunc("GET /metrics", apiCfg.handlerMetrics)
-	srvMux.HandleFunc("POST /reset", apiCfg.handlerReset)
+	srvMux.HandleFunc("GET /api/healthz", handlerReadiness)
+	srvMux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
+	srvMux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
