@@ -24,6 +24,7 @@ func main() {
 
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
+	platformDev := os.Getenv("PLATFORM")
 	if dbURL == "" {
 		log.Fatal("DB_URL must be set")
 	}
@@ -37,6 +38,7 @@ func main() {
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             dbQueries,
+		platform:       platformDev,
 	}
 
 	srvMux := http.NewServeMux()
@@ -46,7 +48,7 @@ func main() {
 
 	srvMux.HandleFunc("GET /api/healthz", handlerReadiness)
 	srvMux.HandleFunc("POST /api/validate_chirp", handlerChirpsValidate)
-	srvMux.HandleFunc("POSR /api/users", apiCfg.handlerCreateUser)
+	srvMux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
 
 	srvMux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	srvMux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
