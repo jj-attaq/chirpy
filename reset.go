@@ -2,8 +2,14 @@ package main
 
 import "net/http"
 
-func (cfg *apiConfig) handlerReset(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-	rw.WriteHeader(http.StatusOK)
+func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+	if cfg.platform != "dev" {
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
 	cfg.fileserverHits.Add(-cfg.fileserverHits.Load())
 }

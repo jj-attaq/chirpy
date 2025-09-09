@@ -3,34 +3,41 @@ package main
 import (
 	"database/sql"
 	"log"
-	"os"
-
 	"net/http"
+	"os"
 	"sync/atomic"
 
 	"github.com/jj-attaq/chirpy/internal/database"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
+	platform       string
 }
 
 func main() {
+	const port = "8080"
+	const filepathRoot = "."
+
+	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
-	db, err := sql.Open("postgres", dbURL)
-	if err != nil {
-		panic(err)
+	if dbURL == "" {
+		log.Fatal("DB_URL must be set")
 	}
-	dbQueries := database.New(db)
+
+	dbConn, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Error opening database: %s", err)
+	}
+	dbQueries := database.New(dbConn)
 
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             dbQueries,
 	}
-	const port = "8080"
-	const filepathRoot = "."
 
 	srvMux := http.NewServeMux()
 
@@ -39,6 +46,7 @@ func main() {
 
 	srvMux.HandleFunc("GET /api/healthz", handlerReadiness)
 	srvMux.HandleFunc("POST /api/validate_chirp", handlerChirpsValidate)
+	srvMux.HandleFunc("POSR /api/users", apiCfg.handlerCreateUser)
 
 	srvMux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	srvMux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
