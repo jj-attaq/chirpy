@@ -6,18 +6,12 @@ import (
 	"strings"
 )
 
-var profanity = []string{"kerfuffle", "sharbert", "fornax"}
-
 type parameters struct {
 	Body string `json:"body"`
 }
 
-type validBody struct {
-	Valid bool `json:"valid"`
-}
-
-type cleanParams struct {
-	Body string `json:"cleaned_body"`
+type returnVals struct {
+	CleanedBody string `json:"cleaned_body"`
 }
 
 func handlerChirpsValidate(w http.ResponseWriter, r *http.Request) {
@@ -35,39 +29,27 @@ func handlerChirpsValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, cleanParams{
-		Body: params.removeProfanity().Body,
-	})
+	// Map allows O(1) checking, struct{} as value allows checking with no memory allocation of key value pairs. we only check if the key exists.
+	profanity := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
 
-	// respondWithJSON(w, http.StatusOK, validBody{
-	// 	Valid: true,
-	// })
+	respondWithJSON(w, http.StatusOK, returnVals{
+		CleanedBody: removeProfanity(params.Body, profanity),
+	})
 }
 
-func (p *parameters) removeProfanity() *parameters {
-	words := strings.Split(p.Body, " ")
+func removeProfanity(body string, badWords map[string]struct{}) string {
+	words := strings.Split(body, " ")
 	for i, word := range words {
 		lowerWord := strings.ToLower(word)
-		for _, profaneWord := range profanity {
-			if lowerWord == profaneWord {
-				words[i] = "****"
-			}
+		if _, ok := badWords[lowerWord]; ok {
+			words[i] = "****"
 		}
 	}
-	newParams := strings.Join(words, " ")
-	p.Body = newParams
+	result := strings.Join(words, " ")
 
-	return p
+	return result
 }
-
-// func (p *parameters) removeProfanity() *parameters {
-// 	lowerP := strings.ToLower(p.Body)
-// 	for _, word := range profanity {
-// 		if strings.Contains(lowerP, word) {
-// 			strings.ReplaceAll(lowerP, word, "****")
-// 		}
-// 	}
-// 	p.Body = lowerP
-//
-// 	return p
-// }
