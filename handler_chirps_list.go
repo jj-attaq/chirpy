@@ -3,21 +3,21 @@ package main
 import "net/http"
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	var response []Chirp
-	chirps, err := cfg.db.ListChirps(r.Context())
+	var chirps []Chirp
+	dbChirps, err := cfg.db.ListChirps(r.Context())
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve chirps", err)
 		return
 	}
 
-	for _, chirp := range chirps {
-		response = append(response, Chirp{
-			ID:        chirp.ID,
-			CreatedAt: chirp.CreatedAt,
-			UpdatedAt: chirp.UpdatedAt,
-			Body:      chirp.Body,
-			UserID:    chirp.UserID,
+	for _, dbChirp := range dbChirps {
+		chirps = append(chirps, Chirp{
+			ID:        dbChirp.ID,
+			CreatedAt: dbChirp.CreatedAt,
+			UpdatedAt: dbChirp.UpdatedAt,
+			Body:      dbChirp.Body,
+			UserID:    dbChirp.UserID,
 		})
 	}
-	respondWithJSON(w, http.StatusOK, response)
+	respondWithJSON(w, http.StatusOK, chirps)
 }
