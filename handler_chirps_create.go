@@ -12,23 +12,20 @@ import (
 )
 
 type Chirp struct {
-	ID        string    `json:"id"`
+	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Body      string    `json:"body"`
-	UserID    string    `json:"user_id"`
+	UserID    uuid.UUID `json:"user_id"`
 }
 
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	// take json body and user id as input
 	type parameters struct {
-		Body   string `json:"body"`
-		UserID string `json:"user_id"`
+		Body   string    `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
 	}
 
-	type response struct {
-		Chirp
-	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	err := decoder.Decode(&params)
@@ -40,38 +37,29 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 	// validate said json input
 	validChirp, err := validateChirp(params.Body)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid Chirp", err)
+		respondWithError(w, http.StatusBadRequest, err.Error(), err)
 		return
 	}
 	params.Body = validChirp
 
 	// save the chirp into the database if valid
-	id, err := uuid.Parse(params.UserID)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Cannot identify user uuid", err)
-		return
-	}
-
 	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   params.Body,
-		UserID: id,
+		UserID: params.UserID,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't enter Chirp into database", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create Chirp", err)
 		return
-	}
-	resp := response{
-		Chirp: Chirp{
-			ID:        chirp.ID.String(),
-			CreatedAt: chirp.CreatedAt,
-			UpdatedAt: chirp.UpdatedAt,
-			Body:      chirp.Body,
-			UserID:    chirp.UserID.String(),
-		},
 	}
 
 	// respond with 201 and chirp json response
-	respondWithJSON(w, http.StatusCreated, resp)
+	respondWithJSON(w, http.StatusCreated, Chirp{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
+	})
 }
 
 func validateChirp(body string) (string, error) {
