@@ -47,8 +47,9 @@ func main() {
 	srvMux.Handle("/app/", fsHandler)
 
 	srvMux.HandleFunc("GET /api/healthz", handlerReadiness)
-	srvMux.HandleFunc("POST /api/validate_chirp", handlerChirpsValidate)
+	// srvMux.HandleFunc("POST /api/validate_chirp", handlerChirpsValidate)
 	srvMux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
+	srvMux.HandleFunc("POST /api/chirps", apiCfg.handlerCreateChirp)
 
 	srvMux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	srvMux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
