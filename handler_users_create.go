@@ -62,37 +62,3 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		},
 	})
 }
-
-func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
-		Password string `json:"password"`
-		Email    string `json:"email"`
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-
-	err := decoder.Decode(&params)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Couldn't decode parameters", err)
-		return
-	}
-
-	user, err := cfg.db.GetUser(r.Context(), params.Email)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
-		return
-	}
-
-	if err := auth.CheckPasswordHash(params.Password, user.HashedPassword); err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-	})
-}
