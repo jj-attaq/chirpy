@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -110,70 +111,61 @@ func TestValidateJWT(t *testing.T) {
 	}
 }
 
-//
-// func TestMakeJWT(t *testing.T) {
-// 	secret1 := "testing123"
-//
-// 	tests := []struct {
-// 		name        string
-// 		userID      uuid.UUID
-// 		tokenSecret string
-// 		expiresIn   time.Duration
-// 		wantErr     bool
-// 	}{
-// 		{
-// 			name:        "Successful creation of JWT",
-// 			userID:      uuid.New(),
-// 			tokenSecret: secret1,
-// 			expiresIn:   time.Duration(time.Hour),
-// 			wantErr:     false,
-// 		},
-// 	}
-//
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			_, err := MakeJWT(tt.userID, tt.tokenSecret, tt.expiresIn)
-// 			if (err != nil) != tt.wantErr {
-// 				t.Errorf("MakeJWT() error = %v, wantErr %v", err, tt.wantErr)
-// 			}
-// 		})
-// 	}
-// }
-//
-// func TestValidateJWT(t *testing.T) {
-// 	secret1 := "testing123"
-// 	// secret2 := "testing456"
-//
-// 	tests := []struct {
-// 		name        string
-// 		userID      uuid.UUID
-// 		tokenString string
-// 		tokenSecret string
-// 		expiresIn   time.Duration
-// 		wantErr     bool
-// 	}{
-// 		{
-// 			name:        "Successful validation of JWT",
-// 			userID:      uuid.New(),
-// 			tokenSecret: secret1,
-// 			expiresIn:   time.Duration(time.Hour),
-// 			wantErr:     false,
-// 		},
-// 	}
-//
-// 	// tokenString, tokenSecret string
-//
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			token, _ := MakeJWT(tt.userID, tt.tokenSecret, tt.expiresIn)
-// 			tt.tokenString = token
-// 			id, err := ValidateJWT(tt.tokenString, tt.tokenSecret)
-// 			if (err != nil) != tt.wantErr {
-// 				t.Errorf("ValidateJWT error = %v, wantErr %v", err, tt.wantErr)
-// 			}
-// 			if id != tt.userID {
-// 				t.Errorf("tt.userID does not match ValidateJWT output uuid")
-// 			}
-// 		})
-// 	}
-// }
+func TestGetBearerToken(t *testing.T) {
+	userID := uuid.New()
+	token, _ := MakeJWT(userID, "secret", time.Hour)
+
+	validHeader := http.Header{"Authorization": []string{"Bearer " + token}}
+
+	tests := []struct {
+		name    string
+		header  http.Header
+		wantErr bool
+	}{
+		{
+			name:    "Success",
+			header:  validHeader,
+			wantErr: false,
+		},
+		{
+			name:    "No authorization header",
+			header:  http.Header{"NoAuthorizationHeader": []string{"Bearer " + token}},
+			wantErr: true,
+		},
+		{
+			name:    "Empty authorization header",
+			header:  http.Header{"Authorization": []string{}},
+			wantErr: true,
+		},
+		{
+			name: "Multiple authorization headers",
+			header: http.Header{"Authorization": []string{
+				"Bearer " + token,
+				"extra element in slice"},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "Invalid prefix",
+			header:  http.Header{"Authorization": []string{"Invalid prefix" + token}},
+			wantErr: true,
+		},
+		{
+			name:    "Empty bearer token",
+			header:  http.Header{"Authorization": []string{"Bearer " + ""}},
+			wantErr: true,
+		},
+		{
+			name:    "Whitespace around value is trimmed",
+			header:  http.Header{"Authorization": []string{"   Bearer " + token + "   "}},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		_, err := GetBearerToken(tt.header)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("GetBearerToken() error = %v, wantErr %v", err, tt.wantErr)
+		}
+	}
+}
