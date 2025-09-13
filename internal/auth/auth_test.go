@@ -62,69 +62,118 @@ func TestCheckPasswordHash(t *testing.T) {
 	}
 }
 
-func TestMakeJWT(t *testing.T) {
-	secret1 := "testing123"
-
-	tests := []struct {
-		name        string
-		userID      uuid.UUID
-		tokenSecret string
-		expiresIn   time.Duration
-		wantErr     bool
-	}{
-		{
-			name:        "Successful creation of JWT",
-			userID:      uuid.New(),
-			tokenSecret: secret1,
-			expiresIn:   time.Duration(time.Hour),
-			wantErr:     false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := MakeJWT(tt.userID, tt.tokenSecret, tt.expiresIn)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MakeJWT() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func TestValidateJWT(t *testing.T) {
-	secret1 := "testing123"
-	// secret2 := "testing456"
+	userID := uuid.New()
+	validToken, _ := MakeJWT(userID, "secret", time.Hour)
 
 	tests := []struct {
 		name        string
-		userID      uuid.UUID
 		tokenString string
 		tokenSecret string
-		expiresIn   time.Duration
+		wantUserID  uuid.UUID
 		wantErr     bool
 	}{
 		{
-			name:        "Successful validation of JWT",
-			userID:      uuid.New(),
-			tokenSecret: secret1,
-			expiresIn:   time.Duration(time.Hour),
+			name:        "Valid token",
+			tokenString: validToken,
+			tokenSecret: "secret",
+			wantUserID:  userID,
 			wantErr:     false,
+		},
+		{
+			name:        "Invalid token",
+			tokenString: "invalid.token.string",
+			tokenSecret: "secret",
+			wantUserID:  uuid.Nil,
+			wantErr:     true,
+		},
+		{
+			name:        "Wrong secret",
+			tokenString: validToken,
+			tokenSecret: "wrong_secret",
+			wantUserID:  uuid.Nil,
+			wantErr:     true,
 		},
 	}
 
-	// tokenString, tokenSecret string
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			token, _ := MakeJWT(tt.userID, tt.tokenSecret, tt.expiresIn)
-			tt.tokenString = token
-			id, err := ValidateJWT(tt.tokenString, tt.tokenSecret)
+			gotUserID, err := ValidateJWT(tt.tokenString, tt.tokenSecret)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateJWT error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateJWT() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-			if id != tt.userID {
-				t.Errorf("tt.userID does not match ValidateJWT output uuid")
+			if gotUserID != tt.wantUserID {
+				t.Errorf("ValidateJWT() gotUserID = %v, want %v", gotUserID, tt.wantUserID)
 			}
 		})
 	}
 }
+
+//
+// func TestMakeJWT(t *testing.T) {
+// 	secret1 := "testing123"
+//
+// 	tests := []struct {
+// 		name        string
+// 		userID      uuid.UUID
+// 		tokenSecret string
+// 		expiresIn   time.Duration
+// 		wantErr     bool
+// 	}{
+// 		{
+// 			name:        "Successful creation of JWT",
+// 			userID:      uuid.New(),
+// 			tokenSecret: secret1,
+// 			expiresIn:   time.Duration(time.Hour),
+// 			wantErr:     false,
+// 		},
+// 	}
+//
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			_, err := MakeJWT(tt.userID, tt.tokenSecret, tt.expiresIn)
+// 			if (err != nil) != tt.wantErr {
+// 				t.Errorf("MakeJWT() error = %v, wantErr %v", err, tt.wantErr)
+// 			}
+// 		})
+// 	}
+// }
+//
+// func TestValidateJWT(t *testing.T) {
+// 	secret1 := "testing123"
+// 	// secret2 := "testing456"
+//
+// 	tests := []struct {
+// 		name        string
+// 		userID      uuid.UUID
+// 		tokenString string
+// 		tokenSecret string
+// 		expiresIn   time.Duration
+// 		wantErr     bool
+// 	}{
+// 		{
+// 			name:        "Successful validation of JWT",
+// 			userID:      uuid.New(),
+// 			tokenSecret: secret1,
+// 			expiresIn:   time.Duration(time.Hour),
+// 			wantErr:     false,
+// 		},
+// 	}
+//
+// 	// tokenString, tokenSecret string
+//
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			token, _ := MakeJWT(tt.userID, tt.tokenSecret, tt.expiresIn)
+// 			tt.tokenString = token
+// 			id, err := ValidateJWT(tt.tokenString, tt.tokenSecret)
+// 			if (err != nil) != tt.wantErr {
+// 				t.Errorf("ValidateJWT error = %v, wantErr %v", err, tt.wantErr)
+// 			}
+// 			if id != tt.userID {
+// 				t.Errorf("tt.userID does not match ValidateJWT output uuid")
+// 			}
+// 		})
+// 	}
+// }
